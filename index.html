@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taquería La Flamita - Menú Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #0d0d0d;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Canvas background for floating animated emojis */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Interactive component layers */
+        .content-layer {
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Wireframe button styles */
+        .btn-flamita {
+            background: linear-gradient(180deg, #FFCC00 0%, #FF9900 100%);
+            color: #000000;
+            font-weight: 900;
+            border: 3px solid #000000;
+            box-shadow: 0 6px 0px #000000, 0 10px 15px rgba(255, 153, 0, 0.4);
+            transition: all 0.15s ease;
+        }
+
+        .btn-flamita:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0px #000000;
+        }
+
+        .btn-category {
+            background: #FFB800;
+            color: #000;
+            font-weight: bold;
+            border-radius: 16px;
+            border: 2px solid #000;
+            box-shadow: 0 4px 0 #000;
+        }
+
+        .btn-category:hover, .btn-category.active {
+            background: #FF8800;
+            color: #FFF;
+        }
+
+        .card-menu {
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(8px);
+            border: 2px solid #FF9900;
+            border-radius: 18px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121212;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #FF9900;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="content-layer container mx-auto px-4 py-6 max-w-2xl">
+
+        <header class="text-center mb-6">
+            <div class="btn-flamita py-4 px-6 rounded-2xl text-2xl md:text-3xl uppercase tracking-wider inline-block cursor-pointer shadow-2xl" onclick="showCategory('main')">
+                🔥 Taquería La Flamita 🔥
+            </div>
+            <p class="text-yellow-400 mt-2 text-sm md:text-base font-bold bg-black/50 py-1 px-4 rounded-full inline-block mt-3">
+                ¡Los mejores tacos al pastor y especialidades al carbón!
+            </p>
+        </header>
+
+        <main id="main-menu" class="space-y-5">
+            <button onclick="showCategory('tacos')" class="btn-flamita w-full py-5 text-2xl rounded-2xl flex items-center justify-center gap-3">
+                <span>🌮</span> Tacos <span>🌮</span>
+            </button>
+            
+            <button onclick="showCategory('especialidades')" class="btn-flamita w-full py-5 text-2xl rounded-2xl flex items-center justify-center gap-3">
+                <span>🌶️</span> Especialidades y Tortas <span>🌶️</span>
+            </button>
+
+            <button onclick="showCategory('kilos')" class="btn-flamita w-full py-5 text-2xl rounded-2xl flex items-center justify-center gap-3">
+                <span>⚖️</span> Carne por Kilo <span>⚖️</span>
+            </button>
+
+            <button onclick="showCategory('bebidas')" class="btn-flamita w-full py-5 text-2xl rounded-2xl flex items-center justify-center gap-3">
+                <span>🥤</span> Bebidas <span>🥤</span>
+            </button>
+
+            <button onclick="showCategory('postres')" class="btn-flamita w-full py-5 text-2xl rounded-2xl flex items-center justify-center gap-3">
+                <span>🍮</span> Postres <span>🧁</span>
+            </button>
+        </main>
+
+        <section id="category-view" class="hidden">
+            <!-- Navigation header for category -->
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="showCategory('main')" class="bg-gray-800 hover:bg-gray-700 text-yellow-400 px-4 py-2 rounded-xl text-sm font-bold border border-yellow-500">
+                    ⬅️ Volver al Menú
+                </button>
+                <h2 id="category-title" class="text-2xl font-bold text-yellow-400 underline decoration-orange-500">
+                    Tacos
+                </h2>
+            </div>
+
+            <!-- Category Filter Pills -->
+            <div id="subnav" class="flex gap-2 overflow-x-auto pb-3 mb-4 hidden">
+                <button onclick="filterSubcategory('todos')" class="btn-category active px-4 py-2 text-sm whitespace-nowrap">Todos</button>
+                <button onclick="filterSubcategory('especialidad')" class="btn-category px-4 py-2 text-sm whitespace-nowrap">Especialidades</button>
+                <button onclick="filterSubcategory('torta')" class="btn-category px-4 py-2 text-sm whitespace-nowrap">Tortas</button>
+            </div>
+
+            <!-- Items Grid -->
+            <div id="products-list" class="space-y-4">
+                <!-- Products dynamically inserted via JS -->
+            </div>
+        </section>
+
+    </div>
+
+    <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-black/95 border-t-2 border-yellow-500 p-4 z-50 backdrop-blur-md">
+        <div class="max-w-2xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="relative cursor-pointer" onclick="openCartModal()">
+                    <span class="text-3xl">🛒</span>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-extrabold rounded-full w-6 h-6 flex items-center justify-center border-2 border-black">
+                        0
+                    </span>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-400">Total a pagar:</div>
+                    <div id="cart-total" class="text-xl font-black text-yellow-400">$0.00 MXN</div>
+                </div>
+            </div>
+            <button onclick="openCartModal()" class="btn-flamita px-5 py-2.5 rounded-xl text-base flex items-center gap-2">
+                Ver Pedido ➔
+            </button>
+        </div>
+    </div>
+
+    <div id="cart-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-zinc-900 border-2 border-yellow-500 rounded-2xl w-full max-w-lg p-6 max-h-[90vh] flex flex-col justify-between shadow-2xl">
+            <div>
+                <div class="flex justify-between items-center border-b border-zinc-700 pb-3 mb-4">
+                    <h3 class="text-2xl font-bold text-yellow-400 flex items-center gap-2">
+                        <span>🌮</span> Tu Pedido Flamita
+                    </h3>
+                    <button onclick="closeCartModal()" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+
+                <!-- Order items container -->
+                <div id="cart-items-container" class="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                    <!-- Cart items rendered here -->
+                </div>
+            </div>
+
+            <!-- Order Config & Checkout Options -->
+            <div class="mt-4 border-t border-zinc-700 pt-4 space-y-4">
+                <!-- Delivery option -->
+                <div>
+                    <label class="block text-sm font-bold text-yellow-400 mb-1">Tipo de Entrega:</label>
+                    <select id="delivery-type" onchange="updateCartTotalUI()" class="w-full bg-zinc-800 text-white rounded-xl p-3 border border-zinc-600 focus:outline-none focus:border-yellow-500">
+                        <option value="recoger">Recoger en Sucursal ($0 MXN)</option>
+                        <option value="domicilio">Servicio a Domicilio (+$35 MXN)</option>
+                    </select>
+                </div>
+
+                <!-- Total breakdown -->
+                <div class="bg-zinc-800/80 p-3 rounded-xl space-y-1">
+                    <div class="flex justify-between text-sm text-gray-300">
+                        <span>Subtotal:</span>
+                        <span id="cart-subtotal">$0.00 MXN</span>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-300">
+                        <span>Envío:</span>
+                        <span id="cart-shipping">$0.00 MXN</span>
+                    </div>
+                    <div class="flex justify-between text-lg font-bold text-yellow-400 border-t border-zinc-700 pt-1 mt-1">
+                        <span>Total Final:</span>
+                        <span id="modal-cart-total">$0.00 MXN</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="space-y-2">
+                    <button onclick="sendWhatsAppOrder()" class="w-full bg-green-600 hover:bg-green-500 text-white font-black py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fab fa-whatsapp text-2xl"></i> Pedir por WhatsApp / Transferencia SPEI
+                    </button>
+                    <button onclick="clearCart()" class="w-full bg-red-900/40 hover:bg-red-800/60 text-red-300 text-xs py-2 rounded-lg">
+                        Vaciar Carrito
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MENU_DATA = [
+            // TACOS
+            { id: 't1', name: 'Taco de Pastor', category: 'tacos', price: 22, desc: 'Con su piñita, cilantro y cebolla', emoji: '🌮' },
+            { id: 't2', name: 'Taco de Chuleta', category: 'tacos', price: 25, desc: 'Jugosa chuleta ahumada', emoji: '🌮' },
+            { id: 't3', name: 'Taco de Bisteck', category: 'tacos', price: 25, desc: 'Bisteck de res suave a la plancha', emoji: '🌮' },
+            { id: 't4', name: 'Taco de Cabeza', category: 'tacos', price: 26, desc: 'Al vapor, tierna y bien picadita', emoji: '🌮' },
+            { id: 't5', name: 'Taco de Chorizo', category: 'tacos', price: 22, desc: 'Chorizo estilo artesanal bien dorado', emoji: '🌮' },
+            { id: 't6', name: 'Taco de Lengua', category: 'tacos', price: 32, desc: 'Lengua de res suave al vapor', emoji: '🌮' },
+            { id: 't7', name: 'Taco de Costilla', category: 'tacos', price: 30, desc: 'Costilla de res despepitada', emoji: '🌮' },
+
+            // ESPECIALIDADES
+            { id: 'e1', name: '"No que no"', category: 'especialidades', subcat: 'especialidad', price: 95, desc: 'Pastor, cebolla, pimiento, jamón y piña', emoji: '🌶️' },
+            { id: 'e2', name: '"Que me ves"', category: 'especialidades', subcat: 'especialidad', price: 105, desc: 'Chuleta, pastor, pimiento, chile serrano y cebolla', emoji: '🔥' },
+            { id: 'e3', name: '"Otra vez"', category: 'especialidades', subcat: 'especialidad', price: 110, desc: 'Bisteck, chorizo, serrano, cebolla y tocino', emoji: '🥩' },
+            { id: 'e4', name: '"Casi nunca"', category: 'especialidades', subcat: 'especialidad', price: 125, desc: 'Lengua, costilla, cebolla, pimiento, tocino y jalapeño', emoji: '👑' },
+
+            // TORTAS
+            { id: 'tr1', name: 'Torta de Pastor', category: 'especialidades', subcat: 'torta', price: 65, desc: 'Telera doradita con quesillo y aguacate', emoji: '🥪' },
+            { id: 'tr2', name: 'Torta de Bisteck', category: 'especialidades', subcat: 'torta', price: 70, desc: 'Bisteck con frijoles refritos y verdura', emoji: '🥪' },
+            { id: 'tr3', name: 'Torta de Chuleta', category: 'especialidades', subcat: 'torta', price: 70, desc: 'Chuleta ahumada a la plancha', emoji: '🥪' },
+            { id: 'tr4', name: 'Torta Especial "La Flamita"', category: 'especialidades', subcat: 'torta', price: 90, desc: 'Pastor, bisteck, quesillo, piña y tocino', emoji: '🥪' },
+
+            // KILOS
+            { id: 'k1', name: 'Kilo de Pastor', category: 'kilos', price: 380, desc: 'Incluye tortillas, salsas, cebolla, cilantro y piña', isKilo: true, emoji: '⚖️' },
+            { id: 'k2', name: 'Kilo de Bisteck', category: 'kilos', price: 420, desc: 'Incluye tortillas, salsas y limones', isKilo: true, emoji: '⚖️' },
+            { id: 'k3', name: 'Kilo de Lengua', category: 'kilos', price: 520, desc: 'Carne surtida al vapor con todo sus complementos', isKilo: true, emoji: '⚖️' },
+
+            // BEBIDAS
+            { id: 'b1', name: 'Coca Cola 600ml', category: 'bebidas', price: 30, desc: 'Bien fría', emoji: '🥤' },
+            { id: 'b2', name: 'Pepsi 600ml', category: 'bebidas', price: 28, desc: 'Refrescante', emoji: '🥤' },
+            { id: 'b3', name: 'Fanta 600ml', category: 'bebidas', price: 28, desc: 'Sabor Naranja', emoji: '🥤' },
+            { id: 'b4', name: 'Mirinda 600ml', category: 'bebidas', price: 28, desc: 'Sabor Naranja', emoji: '🥤' },
+            { id: 'b5', name: 'Sprite 600ml', category: 'bebidas', price: 28, desc: 'Sabor Lima-Limón', emoji: '🥤' },
+            { id: 'b6', name: '7up 600ml', category: 'bebidas', price: 28, desc: 'Sabor Lima-Limón', emoji: '🥤' },
+            { id: 'b7', name: 'Agua de Horchata 1L', category: 'bebidas', price: 35, desc: 'Receta casera con canela', emoji: '🧃' },
+            { id: 'b8', name: 'Boing de Sabores 500ml', category: 'bebidas', price: 25, desc: 'Mango, Guayaba o Durazno', emoji: '🧃' },
+
+            // POSTRES
+            { id: 'p1', name: 'Flan Napolitano', category: 'postres', price: 40, desc: 'Receta de la abuela', emoji: '🍮' },
+            { id: 'p2', name: 'Jericalla', category: 'postres', price: 35, desc: 'Tradicional doradita de arriba', emoji: '🧁' },
+            { id: 'p3', name: 'Gelatina de Mosaico', category: 'postres', price: 30, desc: 'Con crema de tres leches', emoji: '🍮' },
+            { id: 'p4', name: 'Arroz con Leche', category: 'postres', price: 35, desc: 'Espolvoreado con canela', emoji: '🧁' }
+        ];
+
+        /* Cart state persistence */
+        let cart = [];
+        let currentCategory = 'main';
+
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let particles = [];
+        let currentEmojiSymbol = '🔥';
+
+        const EMOJI_MAP = {
+            'main': '🔥',
+            'tacos': '🌮',
+            'especialidades': '🌶️',
+            'kilos': '⚖️',
+            'bebidas': '🥤',
+            'postres': '🍮'
+        };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(symbol) {
+                this.reset(symbol);
+            }
+
+            reset(symbol) {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + Math.random() * 100;
+                this.size = Math.random() * 24 + 20; // Varied sizes
+                this.speedY = Math.random() * 1.5 + 0.8;
+                this.speedX = (Math.random() - 0.5) * 0.8;
+                this.symbol = symbol || currentEmojiSymbol;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.02;
+            }
+
+            update() {
+                this.y -= this.speedY;
+                this.x += this.speedX;
+                this.rotation += this.rotationSpeed;
+
+                if (this.y < -50) {
+                    this.reset(currentEmojiSymbol);
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                // Opacity 50% & Saturation 70% filter
+                ctx.globalAlpha = 0.50;
+                ctx.filter = 'saturate(70%)';
+                
+                ctx.font = `${this.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.symbol, 0, 0);
+                
+                ctx.restore();
+            }
+        }
+
+        // Initialize particle pool
+        function initParticles() {
+            particles = [];
+            const count = Math.floor((window.innerWidth * window.innerHeight) / 18000);
+            for (let i = 0; i < Math.min(count, 35); i++) {
+                particles.push(new Particle(currentEmojiSymbol));
+            }
+        }
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateCanvas);
+        }
+
+        initParticles();
+        animateCanvas();
+
+        function showCategory(categoryKey) {
+            currentCategory = categoryKey;
+            currentEmojiSymbol = EMOJI_MAP[categoryKey] || '🔥';
+
+            // Change particle symbols dynamically on category switch
+            particles.forEach(p => p.symbol = currentEmojiSymbol);
+
+            const mainMenu = document.getElementById('main-menu');
+            const categoryView = document.getElementById('category-view');
+            const subnav = document.getElementById('subnav');
+
+            if (categoryKey === 'main') {
+                mainMenu.classList.remove('hidden');
+                categoryView.classList.add('hidden');
+                return;
+            }
+
+            mainMenu.classList.add('hidden');
+            categoryView.classList.remove('hidden');
+
+            const titleMap = {
+                'tacos': '🌮 Tacos al Pastor y Más',
+                'especialidades': '🌶️ Especialidades y Tortas',
+                'kilos': '⚖️ Carne por Kilo',
+                'bebidas': '🥤 Bebidas Refrescantes',
+                'postres': '🍮 Postres Caseros'
+            };
+
+            document.getElementById('category-title').innerText = titleMap[categoryKey] || 'Menú';
+
+            if (categoryKey === 'especialidades') {
+                subnav.classList.remove('hidden');
+            } else {
+                subnav.classList.add('hidden');
+            }
+
+            renderProducts(categoryKey, 'todos');
+        }
+
+        function filterSubcategory(subcat) {
+            const buttons = document.querySelectorAll('#subnav button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            renderProducts('especialidades', subcat);
+        }
+
+        function renderProducts(category, subcat = 'todos') {
+            const container = document.getElementById('products-list');
+            container.innerHTML = '';
+
+            let filtered = MENU_DATA.filter(item => item.category === category);
+
+            if (category === 'especialidades' && subcat !== 'todos') {
+                filtered = filtered.filter(item => item.subcat === subcat);
+            }
+
+            filtered.forEach(item => {
+                const cartItem = cart.find(c => c.id === item.id);
+                const qty = cartItem ? cartItem.qty : 0;
+                const hasCheese = cartItem ? cartItem.cheese : false;
+
+                const card = document.createElement('div');
+                card.className = 'card-menu p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4';
+
+                card.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-2xl">${item.emoji}</span>
+                            <h4 class="text-lg font-black text-yellow-400">${item.name}</h4>
+                        </div>
+                        <p class="text-xs text-gray-300 mt-1">${item.desc}</p>
+                        <div class="text-yellow-500 font-bold mt-2 text-base">
+                            $${item.price}.00 MXN ${item.isKilo ? '<span class="text-xs text-gray-400">(por kg)</span>' : ''}
+                        </div>
+                    </div>
+
+                    <div class="w-full sm:w-auto flex flex-col items-end gap-2 border-t sm:border-t-0 pt-2 sm:pt-0 border-zinc-700">
+                        ${!item.isKilo && category !== 'bebidas' && category !== 'postres' ? `
+                            <label class="flex items-center gap-2 text-xs text-yellow-300 cursor-pointer bg-black/40 px-3 py-1 rounded-lg border border-yellow-500/30">
+                                <input type="checkbox" onchange="toggleCheese('${item.id}', this.checked)" ${hasCheese ? 'checked' : ''} class="accent-yellow-500 w-4 h-4">
+                                Con Queso (+ $10 MXN)
+                            </label>
+                        ` : ''}
+
+                        <!-- Multiples for Kilos or Unit Quantity -->
+                        ${item.isKilo ? `
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-gray-400">Porción:</span>
+                                <select onchange="updateKiloQuantity('${item.id}', this.value)" class="bg-zinc-800 text-yellow-400 text-sm font-bold border border-yellow-500 rounded-lg p-1.5">
+                                    <option value="0" ${qty === 0 ? 'selected' : ''}>0 kg</option>
+                                    <option value="0.25" ${qty === 0.25 ? 'selected' : ''}>1/4 kg ($${item.price * 0.25})</option>
+                                    <option value="0.5" ${qty === 0.5 ? 'selected' : ''}>1/2 kg ($${item.price * 0.5})</option>
+                                    <option value="0.75" ${qty === 0.75 ? 'selected' : ''}>3/4 kg ($${item.price * 0.75})</option>
+                                    <option value="1" ${qty === 1 ? 'selected' : ''}>1 kg ($${item.price})</option>
+                                    <option value="1.5" ${qty === 1.5 ? 'selected' : ''}>1.5 kg ($${item.price * 1.5})</option>
+                                    <option value="2" ${qty === 2 ? 'selected' : ''}>2 kg ($${item.price * 2})</option>
+                                </select>
+                            </div>
+                        ` : `
+                            <div class="flex items-center gap-3 bg-black/60 p-1.5 rounded-xl border border-yellow-500/50">
+                                <button onclick="changeQty('${item.id}', -1)" class="w-8 h-8 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold flex items-center justify-center text-lg shadow">
+                                    -
+                                </button>
+                                <span class="text-lg font-extrabold w-6 text-center text-yellow-400">${qty}</span>
+                                <button onclick="changeQty('${item.id}', 1)" class="w-8 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white font-bold flex items-center justify-center text-lg shadow">
+                                    +
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function changeQty(itemId, delta) {
+            const menuItem = MENU_DATA.find(m => m.id === itemId);
+            let cartItem = cart.find(c => c.id === itemId);
+
+            if (!cartItem && delta > 0) {
+                cartItem = { ...menuItem, qty: 0, cheese: false };
+                cart.push(cartItem);
+            }
+
+            if (cartItem) {
+                cartItem.qty += delta;
+                if (cartItem.qty <= 0) {
+                    cart = cart.filter(c => c.id !== itemId);
+                }
+            }
+
+            updateUI();
+        }
+
+        function updateKiloQuantity(itemId, portion) {
+            const portionVal = parseFloat(portion);
+            const menuItem = MENU_DATA.find(m => m.id === itemId);
+            let cartItem = cart.find(c => c.id === itemId);
+
+            if (portionVal === 0) {
+                cart = cart.filter(c => c.id !== itemId);
+            } else {
+                if (!cartItem) {
+                    cartItem = { ...menuItem, qty: portionVal, cheese: false };
+                    cart.push(cartItem);
+                } else {
+                    cartItem.qty = portionVal;
+                }
+            }
+
+            updateUI();
+        }
+
+        function toggleCheese(itemId, isChecked) {
+            let cartItem = cart.find(c => c.id === itemId);
+            if (cartItem) {
+                cartItem.cheese = isChecked;
+            } else if (isChecked) {
+                const menuItem = MENU_DATA.find(m => m.id === itemId);
+                cart.push({ ...menuItem, qty: 1, cheese: true });
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            if (currentCategory !== 'main') {
+                renderProducts(currentCategory);
+            }
+            updateCartTotalUI();
+        }
+
+        function updateCartTotalUI() {
+            let subtotal = 0;
+            let totalItems = 0;
+
+            cart.forEach(item => {
+                let itemPrice = item.price;
+                if (item.cheese) itemPrice += 10;
+
+                subtotal += itemPrice * item.qty;
+                totalItems += item.isKilo ? 1 : item.qty;
+            });
+
+            const deliveryType = document.getElementById('delivery-type').value;
+            const shipping = (deliveryType === 'domicilio' && cart.length > 0) ? 35 : 0;
+            const total = subtotal + shipping;
+
+            document.getElementById('cart-count').innerText = totalItems;
+            document.getElementById('cart-total').innerText = `$${total.toFixed(2)} MXN`;
+            document.getElementById('cart-subtotal').innerText = `$${subtotal.toFixed(2)} MXN`;
+            document.getElementById('cart-shipping').innerText = `$${shipping.toFixed(2)} MXN`;
+            document.getElementById('modal-cart-total').innerText = `$${total.toFixed(2)} MXN`;
+        }
+
+        function openCartModal() {
+            renderCartModalItems();
+            updateCartTotalUI();
+            document.getElementById('cart-modal').classList.remove('hidden');
+        }
+
+        function closeCartModal() {
+            document.getElementById('cart-modal').classList.add('hidden');
+        }
+
+        function renderCartModalItems() {
+            const container = document.getElementById('cart-items-container');
+            container.innerHTML = '';
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <span class="text-4xl">🌮</span>
+                        <p class="mt-2 text-sm">Tu carrito está vacío. ¡Agrega unos taquitos!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            cart.forEach(item => {
+                const unitPrice = item.price + (item.cheese ? 10 : 0);
+                const itemTotal = unitPrice * item.qty;
+
+                const div = document.createElement('div');
+                div.className = 'bg-zinc-800 p-3 rounded-xl flex justify-between items-center border border-zinc-700';
+
+                div.innerHTML = `
+                    <div>
+                        <div class="font-bold text-yellow-400 text-sm">
+                            ${item.name} ${item.cheese ? '<span class="text-xs text-orange-400">(Con Queso)</span>' : ''}
+                        </div>
+                        <div class="text-xs text-gray-400">
+                            ${item.isKilo ? `${item.qty} kg` : `${item.qty} pza(s)`} x $${unitPrice} = <strong class="text-white">$${itemTotal}</strong>
+                        </div>
+                    </div>
+                    <button onclick="changeQty('${item.id}', -${item.qty})" class="text-red-400 hover:text-red-300 text-xs px-2 py-1 bg-red-950/50 rounded border border-red-800">
+                        Quitar
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function clearCart() {
+            cart = [];
+            updateUI();
+            renderCartModalItems();
+        }
+
+        function sendWhatsAppOrder() {
+            if (cart.length === 0) {
+                alert("¡Tu carrito está vacío! Agrega algunos tacos antes de enviar el pedido.");
+                return;
+            }
+
+            let text = "🔥 *NUEVO PEDIDO - TAQUERÍA LA FLAMITA* 🔥\n\n";
+
+            let subtotal = 0;
+            cart.forEach(item => {
+                const unitPrice = item.price + (item.cheese ? 10 : 0);
+                const totalItem = unitPrice * item.qty;
+                subtotal += totalItem;
+
+                text += `• *${item.name}* ${item.cheese ? '(Con Queso +$10)' : ''}\n`;
+                text += `   Cantidad: ${item.isKilo ? item.qty + ' kg' : item.qty + ' pza(s)'} | Total: $${totalItem} MXN\n`;
+            });
+
+            const deliveryType = document.getElementById('delivery-type').value;
+            const shipping = deliveryType === 'domicilio' ? 35 : 0;
+            const total = subtotal + shipping;
+
+            text += `\n--------------------------------\n`;
+            text += `*Subtotal:* $${subtotal} MXN\n`;
+            text += `*Tipo de Entrega:* ${deliveryType === 'domicilio' ? 'Servicio a Domicilio (+$40 MXN)' : 'Recoger en Sucursal'}\n`;
+            text += `*TOTAL A PAGAR:* $${total} MXN\n\n`;
+            text += `👉 *Método de Pago Preferido:* Transferencia SPEI / Efectivo\n`;
+            text += `Favor de confirmarme el tiempo de entrega y datos para transferencia bancaria SPEI.`;
+
+            const phone = "525652677560";
+            const encodedText = encodeURIComponent(text);
+            window.open(`https://wa.me/${phone}?text=${encodedText}`, '_blank');
+        }
+    </script>
+</body>
+</html>
